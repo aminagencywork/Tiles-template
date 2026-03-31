@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "Luxe Marble",
   description: "Premium Marble & Stone Tiles for Elegant Spaces",
   whatsapp: {
-    number: "77758846111", // Replace with actual shop number
+    number: "+918857950160", // Replace with actual shop number
     message: "Hello! I'm interested in ordering the following products:"
   },
   imageKit: {
