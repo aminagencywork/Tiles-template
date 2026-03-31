@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { siteConfig } from '../config/siteConfig';
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react';
-import { getSupabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export function Contact() {
   const [formState, setFormState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -17,7 +17,6 @@ export function Contact() {
     e.preventDefault();
     setFormState('submitting');
 
-    const supabase = getSupabase();
     if (supabase) {
       const { error } = await supabase
         .from('contact_submissions')
