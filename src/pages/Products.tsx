@@ -5,6 +5,8 @@ import { cn } from '../lib/utils';
 import { useCart } from '../lib/CartContext';
 import { ShoppingBag, CheckCircle2 } from 'lucide-react';
 
+import { supabase } from '../lib/supabase';
+
 export function Products() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [products, setProducts] = useState<any[]>([]);
@@ -14,12 +16,23 @@ export function Products() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        setProducts(data);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Map snake_case to camelCase
+        const mappedData = (data || []).map((p: any) => ({
+          ...p,
+          articleModel: p.article_model || p.articleModel
+        }));
+        
+        setProducts(mappedData);
       } catch (err) {
         console.error('Failed to fetch products', err);
-        // Fallback to siteConfig if API fails
+        // Fallback to siteConfig if API/Supabase fails
         setProducts(siteConfig.products);
       } finally {
         setLoading(false);

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Plus, Upload, Trash2, LogOut, CheckCircle2, AlertCircle, ArrowUpDown } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 export function Admin() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,9 +41,19 @@ export function Admin() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products');
-      const data = await response.json();
-      setProducts(data);
+      const { data, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      
+      // Map snake_case to camelCase
+      const mappedData = data.map((p: any) => ({
+        ...p,
+        articleModel: p.article_model || p.articleModel
+      }));
+      setProducts(mappedData);
     } catch (err) {
       console.error('Failed to fetch products', err);
     }
@@ -51,22 +62,14 @@ export function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      const data = await response.json();
-      if (data.success) {
-        localStorage.setItem('admin-token', data.token);
-        setIsLoggedIn(true);
-        fetchProducts();
-      } else {
-        setError(data.message || 'Login failed');
-      }
-    } catch (err) {
-      setError('An error occurred during login');
+    
+    // Client-side authentication using siteConfig
+    if (password === siteConfig.adminPassword) {
+      localStorage.setItem('admin-token', 'admin-token-mock');
+      setIsLoggedIn(true);
+      fetchProducts();
+    } else {
+      setError('Invalid password');
     }
   };
 
@@ -78,22 +81,18 @@ export function Admin() {
   const handleDeleteProduct = async (id: number | string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     
-    console.log('Attempting to delete product with ID:', id);
     try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setSuccess('Product deleted successfully');
-        fetchProducts();
-      } else {
-        setError(data.error || 'Failed to delete product');
-        console.error('Delete failed:', data);
-      }
-    } catch (err) {
-      setError('An error occurred during deletion');
-      console.error('Delete error:', err);
+      const { error: deleteError } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
+
+      setSuccess('Product deleted successfully');
+      fetchProducts();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete product');
     }
   };
 
@@ -146,17 +145,31 @@ export function Admin() {
 
       // Upload image if file is selected
       if (imageFile) {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        const uploadRes = await fetch('/api/upload', {
+        // 1. Get Auth Params
+        const authRes = await fetch('/api/imagekit-auth');
+        const authData = await authRes.json();
+
+        // 2. Upload to ImageKit
+        const imageFormData = new FormData();
+        imageFormData.append('file', imageFile);
+        imageFormData.append('fileName', imageFile.name);
+        imageFormData.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || '');
+        imageFormData.append('signature', authData.signature);
+        imageFormData.append('expire', authData.expire.toString());
+        imageFormData.append('token', authData.token);
+        imageFormData.append('folder', '/products');
+        imageFormData.append('useUniqueFileName', 'true');
+
+        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
           method: 'POST',
-          body: formData
+          body: imageFormData
         });
+
         const uploadData = await uploadRes.json();
-        if (uploadData.imageUrl) {
-          imageUrl = uploadData.imageUrl;
+        if (uploadData.url) {
+          imageUrl = uploadData.url;
         } else {
-          throw new Error('Image upload failed');
+          throw new Error('Image upload failed: ' + (uploadData.message || 'Unknown error'));
         }
       }
 
@@ -167,35 +180,32 @@ export function Admin() {
       const finalCategory = newProduct.category === 'other' ? customCategory : newProduct.category;
       if (!finalCategory) throw new Error('Please provide a category');
 
-      const productData = { 
-        ...newProduct, 
-        category: finalCategory, 
-        image: imageUrl 
-      };
-      
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData)
-      });
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert([{
+          name: newProduct.name,
+          category: finalCategory,
+          price: newProduct.price,
+          brand: newProduct.brand,
+          article_model: newProduct.articleModel,
+          image: imageUrl
+        }]);
 
-      if (response.ok) {
-        setSuccess('Product added successfully!');
-        setNewProduct({
-          name: '',
-          category: 'marble',
-          brand: '',
-          price: '',
-          articleModel: '',
-          image: ''
-        });
-        setCustomCategory('');
-        setImageFile(null);
-        setImagePreview(null);
-        fetchProducts();
-      } else {
-        throw new Error('Failed to add product');
-      }
+      if (insertError) throw insertError;
+
+      setSuccess('Product added successfully!');
+      setNewProduct({
+        name: '',
+        category: 'marble',
+        brand: '',
+        price: '',
+        articleModel: '',
+        image: ''
+      });
+      setCustomCategory('');
+      setImageFile(null);
+      setImagePreview(null);
+      fetchProducts();
     } catch (err: any) {
       setError(err.message || 'Failed to add product');
     } finally {
