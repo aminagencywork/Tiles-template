@@ -40,19 +40,20 @@
     "image": "/uploads/1774950692179-533726908.webp"
   },
   {
-    "id": 1774964823309,
-    "name": "jhkjhkj",
-    "category": "quartz",
-    "price": "₹1000/sqft",
-    "articleModel": "jdshjk",
-    "image": "https://ik.imagekit.io/amin123/products/1774964820603-94968652_v0St3as70.png"
-  },
-  {
     "id": 1774966924197,
     "name": "ghtjyhg",
     "category": "marble",
     "price": "₹234/sqft",
     "articleModel": "svdbfngbvc",
     "image": "https://ik.imagekit.io/amin123/products/1774966922543-11563505_Rn_eFn9VZ.jpeg"
+  },
+  {
+    "id": 1774980984430,
+    "name": "yyugu",
+    "category": "marble",
+    "brand": "123",
+    "price": "₹35435/sqft",
+    "articleModel": "nbhb",
+    "image": "https://ik.imagekit.io/amin123/products/1774980982511-572316916_Cu_WTE6FJ.webp"
   }
 ]

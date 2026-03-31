@@ -1,6 +1,7 @@
 export const siteConfig = {
   name: "Luxe Marble",
   description: "Premium Marble & Stone Tiles for Elegant Spaces",
+  adminPassword: "admin123", // Moved from .env as requested
   whatsapp: {
     number: "+918857950160", // Replace with actual shop number
     message: "Hello! I'm interested in ordering the following products:"

@@ -5,6 +5,7 @@ import multer from "multer";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import ImageKit from "imagekit";
+import { siteConfig } from "./src/config/siteConfig";
 
 dotenv.config();
 
@@ -53,7 +54,7 @@ async function startServer() {
   // Admin Login
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
-    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminPassword = siteConfig.adminPassword;
 
     if (password === adminPassword) {
       res.json({ success: true, token: "admin-token-mock" }); // Simple mock token
@@ -85,6 +86,31 @@ async function startServer() {
       res.json(newProduct);
     } catch (error) {
       res.status(500).json({ error: "Failed to save product" });
+    }
+  });
+
+  // Delete Product
+  app.delete("/api/products/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log('DELETE request for product ID:', id);
+      const products = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+      console.log('Total products before delete:', products.length);
+      
+      const filteredProducts = products.filter((p: any) => p.id.toString() !== id.toString());
+      console.log('Total products after filter:', filteredProducts.length);
+      
+      if (products.length === filteredProducts.length) {
+        console.warn('Product not found for deletion:', id);
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(filteredProducts, null, 2));
+      console.log('Product deleted successfully:', id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete error:', error);
+      res.status(500).json({ error: "Failed to delete product" });
     }
   });
 
